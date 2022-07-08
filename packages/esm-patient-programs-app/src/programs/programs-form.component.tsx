@@ -12,6 +12,8 @@ import {
   useSessionUser,
   useLocations,
   useLayoutType,
+  useSession,
+  usePatient,
 } from '@openmrs/esm-framework';
 import {
   Button,
@@ -31,22 +33,22 @@ import {
 } from './programs.resource';
 import { DefaultWorkspaceProps } from '@openmrs/esm-patient-common-lib';
 import styles from './programs-form.scss';
+import { useEligiblePrograms } from '../hooks/usePrograms';
+import { launchFormEntry } from '../helpers/helper';
 
 const ProgramsForm: React.FC<DefaultWorkspaceProps> = ({ closeWorkspace, patientUuid }) => {
+  const { patient } = usePatient(patientUuid);
+  console.log(patient);
   const { t } = useTranslation();
   const isTablet = useLayoutType() === 'tablet';
-  const session = useSessionUser();
+  const session = useSession();
   const availableLocations = useLocations();
   const { mutate } = useSWRConfig();
 
   const { data: availablePrograms } = useAvailablePrograms();
   const { data: enrollments } = useEnrollments(patientUuid);
 
-  const eligiblePrograms = filter(
-    availablePrograms,
-    (program) => !includes(map(enrollments, 'program.uuid'), program.uuid),
-  );
-
+  const { eligiblePrograms } = useEligiblePrograms(patientUuid);
   const [completionDate, setCompletionDate] = React.useState(null);
   const [enrollmentDate, setEnrollmentDate] = React.useState(new Date());
   const [selectedProgram, setSelectedProgram] = React.useState<string>('');
@@ -104,6 +106,11 @@ const ProgramsForm: React.FC<DefaultWorkspaceProps> = ({ closeWorkspace, patient
     [closeWorkspace, completionDate, enrollmentDate, mutate, patientUuid, selectedProgram, t, userLocation],
   );
 
+  function launchEnrollmentWorkspace(programUuid: string) {
+    const program = eligiblePrograms.find((program) => program.uuid === programUuid);
+    launchFormEntry(program.enrollmentFormUuid, patientUuid);
+  }
+
   return (
     <Form className={styles.form} onSubmit={handleSubmit}>
       <div className={styles.formContainer}>
@@ -114,7 +121,7 @@ const ProgramsForm: React.FC<DefaultWorkspaceProps> = ({ closeWorkspace, patient
               invalidText={t('required', 'Required')}
               labelText=""
               light={isTablet}
-              onChange={(event) => setSelectedProgram(event.target.value)}
+              onChange={(event) => launchEnrollmentWorkspace(event.target.value)}
             >
               {!selectedProgram ? <SelectItem text={t('chooseProgram', 'Choose a program')} value="" /> : null}
               {eligiblePrograms?.length > 0 &&

@@ -59,6 +59,7 @@ export interface Program {
     uuid: string;
     display: string;
   };
+  enrollmentFormUuid?: string;
 }
 
 export interface LocationData {
