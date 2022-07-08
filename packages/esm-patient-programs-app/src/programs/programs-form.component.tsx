@@ -9,9 +9,9 @@ import {
   createErrorHandler,
   showNotification,
   showToast,
-  useSession,
   useLocations,
   useLayoutType,
+  useSession,
   usePatient,
 } from '@openmrs/esm-framework';
 import {
@@ -29,7 +29,6 @@ import {
   useAvailablePrograms,
   useEnrollments,
   customRepresentation,
-  updateProgramEnrollment,
 } from './programs.resource';
 import { DefaultWorkspaceProps } from '@openmrs/esm-patient-common-lib';
 import styles from './programs-form.scss';
@@ -37,7 +36,6 @@ import { useEligiblePrograms } from '../hooks/usePrograms';
 import { launchFormEntry } from '../helpers/helper';
 
 const ProgramsForm: React.FC<DefaultWorkspaceProps> = ({ closeWorkspace, patientUuid }) => {
-  const { patient } = usePatient(patientUuid);
   const { t } = useTranslation();
   const isTablet = useLayoutType() === 'tablet';
   const session = useSession();
@@ -46,13 +44,6 @@ const ProgramsForm: React.FC<DefaultWorkspaceProps> = ({ closeWorkspace, patient
 
   const { data: availablePrograms } = useAvailablePrograms();
   const { data: enrollments } = useEnrollments(patientUuid);
-  const currentEnrollment = programEnrollmentId && enrollments.filter((e) => e.uuid == programEnrollmentId)[0];
-  const currentProgram = currentEnrollment
-    ? {
-        display: currentEnrollment.program.name,
-        ...currentEnrollment.program,
-      }
-    : null;
 
   const { eligiblePrograms } = useEligiblePrograms(patientUuid);
   const [completionDate, setCompletionDate] = React.useState(null);
@@ -79,62 +70,34 @@ const ProgramsForm: React.FC<DefaultWorkspaceProps> = ({ closeWorkspace, patient
       };
 
       const abortController = new AbortController();
-      const sub = currentEnrollment
-        ? updateProgramEnrollment(currentEnrollment.uuid, payload, abortController).subscribe(
-            (response) => {
-              if (response.status === 200) {
-                closeWorkspace();
+      const sub = createProgramEnrollment(payload, abortController).subscribe(
+        (response) => {
+          if (response.status === 201) {
+            closeWorkspace();
 
-                showToast({
-                  critical: true,
-                  kind: 'success',
-                  description: t(
-                    'enrollmentUpdatesNowVisible',
-                    'Changes to the program are now visible in the Programs table',
-                  ),
-                  title: t('enrollmentUpdated', 'Program enrollment updated'),
-                });
+            showToast({
+              critical: true,
+              kind: 'success',
+              description: t('enrollmentNowVisible', 'It is now visible on the Programs page'),
+              title: t('enrollmentSaved', 'Program enrollment saved'),
+            });
 
-                mutate(`/ws/rest/v1/programenrollment?patient=${patientUuid}&v=${customRepresentation}`);
-              }
-            },
-            (err) => {
-              createErrorHandler();
+            mutate(`/ws/rest/v1/programenrollment?patient=${patientUuid}&v=${customRepresentation}`);
+            closeWorkspace();
+            launchFormEntry(selectedProgram, patientUuid);
+          }
+        },
+        (err) => {
+          createErrorHandler();
 
-              showNotification({
-                title: t('programEnrollmentSaveError', 'Error saving program enrollment'),
-                kind: 'error',
-                critical: true,
-                description: err?.message,
-              });
-            },
-          )
-        : createProgramEnrollment(payload, abortController).subscribe(
-            (response) => {
-              if (response.status === 201) {
-                closeWorkspace();
-
-                showToast({
-                  critical: true,
-                  kind: 'success',
-                  description: t('enrollmentNowVisible', 'It is now visible in the Programs table'),
-                  title: t('enrollmentSaved', 'Program enrollment saved'),
-                });
-
-                mutate(`/ws/rest/v1/programenrollment?patient=${patientUuid}&v=${customRepresentation}`);
-              }
-            },
-            (err) => {
-              createErrorHandler();
-
-              showNotification({
-                title: t('programEnrollmentSaveError', 'Error saving program enrollment'),
-                kind: 'error',
-                critical: true,
-                description: err?.message,
-              });
-            },
-          );
+          showNotification({
+            title: t('programEnrollmentSaveError', 'Error saving program enrollment'),
+            kind: 'error',
+            critical: true,
+            description: err?.message,
+          });
+        },
+      );
       return () => {
         sub.unsubscribe();
       };
@@ -157,7 +120,7 @@ const ProgramsForm: React.FC<DefaultWorkspaceProps> = ({ closeWorkspace, patient
               invalidText={t('required', 'Required')}
               labelText=""
               light={isTablet}
-              onChange={(event) => launchEnrollmentWorkspace(event.target.value)}
+              onChange={(event) => setSelectedProgram(event.target.value)}
             >
               {!selectedProgram ? <SelectItem text={t('chooseProgram', 'Choose a program')} value="" /> : null}
               {eligiblePrograms?.length > 0 &&
@@ -218,7 +181,7 @@ const ProgramsForm: React.FC<DefaultWorkspaceProps> = ({ closeWorkspace, patient
         </FormGroup>
       </div>
       <ButtonSet className={isTablet ? styles.tablet : styles.desktop}>
-        <Button className={styles.button} kind="secondary" onClick={() => closeWorkspace()}>
+        <Button className={styles.button} kind="secondary" onClick={closeWorkspace}>
           {t('cancel', 'Cancel')}
         </Button>
         <Button className={styles.button} kind="primary" disabled={!selectedProgram} type="submit">
