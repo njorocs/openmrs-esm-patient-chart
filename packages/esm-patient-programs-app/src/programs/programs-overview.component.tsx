@@ -1,5 +1,6 @@
 import React from 'react';
 import Add16 from '@carbon/icons-react/es/add/16';
+import TrashCan16 from '@carbon/icons-react/es/trash-can/16';
 import styles from './programs-overview.scss';
 import { formatDate, formatDatetime, usePagination } from '@openmrs/esm-framework';
 import {
@@ -73,6 +74,10 @@ const ProgramsOverview: React.FC<ProgramsOverviewProps> = ({ basePath, patientUu
       key: 'status',
       header: t('status', 'Status'),
     },
+    {
+      key: 'actions',
+      header: t('actions', 'Actions'),
+    },
   ];
 
   const tableRows = React.useMemo(() => {
@@ -84,6 +89,7 @@ const ProgramsOverview: React.FC<ProgramsOverviewProps> = ({ basePath, patientUu
       status: enrollment.dateCompleted
         ? `${t('completedOn', 'Completed On')} ${formatDate(new Date(enrollment.dateCompleted))}`
         : t('active', 'Active'),
+      actions: <Button onClick={() => launchProgramsForm()} hasIconOnly={true} kind="ghost" renderIcon={TrashCan16} />,
     }));
   }, [paginatedEnrollments, t]);
 

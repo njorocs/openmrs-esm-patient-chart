@@ -12,7 +12,7 @@ import {
   useSession,
   useLocations,
   useLayoutType,
-  parseDate,
+  usePatient,
 } from '@openmrs/esm-framework';
 import {
   Button,
@@ -33,12 +33,11 @@ import {
 } from './programs.resource';
 import { DefaultWorkspaceProps } from '@openmrs/esm-patient-common-lib';
 import styles from './programs-form.scss';
+import { useEligiblePrograms } from '../hooks/usePrograms';
+import { launchFormEntry } from '../helpers/helper';
 
-interface ProgramsFormProps extends DefaultWorkspaceProps {
-  programEnrollmentId?: string;
-}
-
-const ProgramsForm: React.FC<ProgramsFormProps> = ({ closeWorkspace, patientUuid, programEnrollmentId }) => {
+const ProgramsForm: React.FC<DefaultWorkspaceProps> = ({ closeWorkspace, patientUuid }) => {
+  const { patient } = usePatient(patientUuid);
   const { t } = useTranslation();
   const isTablet = useLayoutType() === 'tablet';
   const session = useSession();
@@ -55,17 +54,11 @@ const ProgramsForm: React.FC<ProgramsFormProps> = ({ closeWorkspace, patientUuid
       }
     : null;
 
-  const eligiblePrograms = currentProgram
-    ? [currentProgram]
-    : filter(availablePrograms, (program) => !includes(map(enrollments, 'program.uuid'), program.uuid));
-  const [completionDate, setCompletionDate] = React.useState<Date>(
-    currentEnrollment?.dateCompleted ? parseDate(currentEnrollment.dateCompleted) : null,
-  );
-  const [enrollmentDate, setEnrollmentDate] = React.useState<Date>(
-    currentEnrollment?.dateEnrolled ? parseDate(currentEnrollment.dateEnrolled) : new Date(),
-  );
-  const [selectedProgram, setSelectedProgram] = React.useState<string>(currentEnrollment?.program.uuid ?? '');
-  const [userLocation, setUserLocation] = React.useState<string>(currentEnrollment?.location.uuid ?? '');
+  const { eligiblePrograms } = useEligiblePrograms(patientUuid);
+  const [completionDate, setCompletionDate] = React.useState(null);
+  const [enrollmentDate, setEnrollmentDate] = React.useState(new Date());
+  const [selectedProgram, setSelectedProgram] = React.useState<string>('');
+  const [userLocation, setUserLocation] = React.useState('');
 
   if (!userLocation && session?.sessionLocation?.uuid) {
     setUserLocation(session?.sessionLocation?.uuid);
@@ -149,6 +142,11 @@ const ProgramsForm: React.FC<ProgramsFormProps> = ({ closeWorkspace, patientUuid
     [closeWorkspace, completionDate, enrollmentDate, mutate, patientUuid, selectedProgram, t, userLocation],
   );
 
+  function launchEnrollmentWorkspace(programUuid: string) {
+    const program = eligiblePrograms.find((program) => program.uuid === programUuid);
+    launchFormEntry(program.enrollmentFormUuid, patientUuid);
+  }
+
   return (
     <Form className={styles.form} onSubmit={handleSubmit}>
       <div className={styles.formContainer}>
@@ -159,7 +157,7 @@ const ProgramsForm: React.FC<ProgramsFormProps> = ({ closeWorkspace, patientUuid
               invalidText={t('required', 'Required')}
               labelText=""
               light={isTablet}
-              onChange={(event) => setSelectedProgram(event.target.value)}
+              onChange={(event) => launchEnrollmentWorkspace(event.target.value)}
             >
               {!selectedProgram ? <SelectItem text={t('chooseProgram', 'Choose a program')} value="" /> : null}
               {eligiblePrograms?.length > 0 &&
