@@ -73,3 +73,22 @@ export function updateProgramEnrollment(programEnrollmentUuid: string, payload, 
     signal: abortController.signal,
   });
 }
+
+export function useKenyaEMRProgram(patientUuid: string) {
+  const { data, error, isValidating } = useSWR<{ data: ProgramsFetchResponse }, Error>(
+    `/ws/rest/v1/kenyaemr/eligiblePrograms?patientUuid=${patientUuid}`,
+    openmrsFetch,
+  );
+
+  const formattedEnrollments =
+    data?.data?.results.length > 0
+      ? data?.data.results.sort((a, b) => (b.dateEnrolled > a.dateEnrolled ? 1 : -1))
+      : null;
+
+  return {
+    data: data ? uniqBy(formattedEnrollments, (program) => program?.program?.uuid) : null,
+    isError: error,
+    isLoading: !data && !error,
+    isValidating,
+  };
+}

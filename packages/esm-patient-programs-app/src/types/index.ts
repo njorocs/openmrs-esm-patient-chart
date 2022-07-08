@@ -34,6 +34,9 @@ export interface PatientProgram {
   states?: [];
   links: Links;
   resourceVersion?: string;
+  enrollmentStatus?: string;
+  enrollmentFormUuid?: string;
+  discontinuationFormUuid?: string;
 }
 
 export type Links = Array<{

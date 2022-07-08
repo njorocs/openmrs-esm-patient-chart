@@ -28,7 +28,9 @@ import {
   launchPatientWorkspace,
 } from '@openmrs/esm-patient-common-lib';
 import { useTranslation } from 'react-i18next';
-import { useAvailablePrograms, useEnrollments } from './programs.resource';
+import { useAvailablePrograms, useEnrollments, useKenyaEMRProgram } from './programs.resource';
+import { launchFormEntry } from '../helpers/helper';
+import { capitalize } from 'lodash';
 
 interface ProgramsOverviewProps {
   basePath: string;
@@ -43,8 +45,7 @@ const ProgramsOverview: React.FC<ProgramsOverviewProps> = ({ basePath, patientUu
   const urlLabel = t('seeAll', 'See all');
   const pageUrl = window.spaBase + basePath + '/programs';
 
-  const { data: enrollments, isError, isLoading, isValidating } = useEnrollments(patientUuid);
-  const activeEnrollments = enrollments?.filter((enrollment) => !enrollment.dateCompleted);
+  const { data: enrollments, isError, isLoading, isValidating } = useKenyaEMRProgram(patientUuid);
 
   const { data: availablePrograms } = useAvailablePrograms();
 
@@ -84,18 +85,29 @@ const ProgramsOverview: React.FC<ProgramsOverviewProps> = ({ basePath, patientUu
     return paginatedEnrollments?.map((enrollment) => ({
       id: enrollment.uuid,
       display: enrollment.display,
-      location: enrollment.location?.display,
-      dateEnrolled: formatDatetime(new Date(enrollment.dateEnrolled)),
-      status: enrollment.dateCompleted
-        ? `${t('completedOn', 'Completed On')} ${formatDate(new Date(enrollment.dateCompleted))}`
-        : t('active', 'Active'),
-      actions: <Button onClick={() => launchProgramsForm()} hasIconOnly={true} kind="ghost" renderIcon={TrashCan16} />,
+      status: capitalize(enrollment.enrollmentStatus),
+      actions:
+        enrollment.enrollmentStatus === 'active' ? (
+          <Button
+            onClick={() => launchFormEntry(enrollment.discontinuationFormUuid, patientUuid)}
+            hasIconOnly={true}
+            kind="ghost"
+            renderIcon={TrashCan16}
+          />
+        ) : (
+          <Button
+            onClick={() => launchFormEntry(enrollment.enrollmentFormUuid, patientUuid)}
+            hasIconOnly={true}
+            kind="ghost"
+            renderIcon={TrashCan16}
+          />
+        ),
     }));
-  }, [paginatedEnrollments, t]);
+  }, [paginatedEnrollments, patientUuid]);
 
   if (isLoading) return <DataTableSkeleton role="progressbar" />;
   if (isError) return <ErrorState error={isError} headerTitle={headerTitle} />;
-  if (activeEnrollments?.length) {
+  if (enrollments?.length) {
     return (
       <div className={styles.widgetCard}>
         <CardHeader title={headerTitle}>
