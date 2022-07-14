@@ -61,15 +61,7 @@ const ProgramsOverview: React.FC<ProgramsOverviewProps> = ({ basePath, patientUu
   const tableHeaders = [
     {
       key: 'display',
-      header: t('activePrograms', 'Active programs'),
-    },
-    {
-      key: 'location',
-      header: t('location', 'Location'),
-    },
-    {
-      key: 'dateEnrolled',
-      header: t('dateEnrolled', 'Date enrolled'),
+      header: t('activePrograms', 'programs'),
     },
     {
       key: 'status',
@@ -88,19 +80,13 @@ const ProgramsOverview: React.FC<ProgramsOverviewProps> = ({ basePath, patientUu
       status: capitalize(enrollment.enrollmentStatus),
       actions:
         enrollment.enrollmentStatus === 'active' ? (
-          <Button
-            onClick={() => launchFormEntry(enrollment.discontinuationFormUuid, patientUuid)}
-            hasIconOnly={true}
-            kind="ghost"
-            renderIcon={TrashCan16}
-          />
+          <Button renderIcon={TrashCan16} onClick={() => launchFormEntry(enrollment.discontinuationFormUuid, patientUuid)} kind="danger--tertiary">
+            Discontinue
+          </Button>
         ) : (
-          <Button
-            onClick={() => launchFormEntry(enrollment.enrollmentFormUuid, patientUuid)}
-            hasIconOnly={true}
-            kind="ghost"
-            renderIcon={TrashCan16}
-          />
+          <Button renderIcon={Add16} onClick={() => launchFormEntry(enrollment.enrollmentFormUuid, patientUuid)} kind="tertiary">
+            Enroll
+          </Button>
         ),
     }));
   }, [paginatedEnrollments, patientUuid]);
